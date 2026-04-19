@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>ギルドMAP</title>
+
+<style>
+body {
+  font-family: "Meiryo", sans-serif;
+  background:#f5f5f5;
+
+  /* ❌ これを削除すると横並び解除 */
+  /* display:flex; */
+
+  /* ✅ 画面中央寄せ（縦横） */
+  display:flex;
+  justify-content:center; /* 横中央 */
+}
+
+/* ===== MAPサイズ（ここ調整） ===== */
+#map {
+  position:relative;
+  width:500px;
+
+  /* ✅ MAP自体を中央寄せしたい場合ここも使える */
+  margin:0 auto;
+}
+
+#arrowLayer{
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+}
+
+/* ★↓↓↓↓ここに追加↓↓↓↓ */
+.flowLine {
+  animation: flow 1s linear infinite;
+}
+
+@keyframes flow {
+  from { stroke-dashoffset: 5; }
+  to   { stroke-dashoffset: -18; }
+}
+/* ★↑↑↑↑ここまで↑↑↑↑ */
+
+/* ===== エリア位置（ここ調整） ===== */
+.a1 { top:10px; right:10px; }
+.a2 { top:260px; left:10px; }
+.a3 { bottom:50px; left:30px; }
+.a4 { bottom:200px; right:10px; }
+
+/* ===== 共通 ===== */
+#main { 
+  margin:auto; 
+  text-align:center;
+
+  /* ✅ 横中央固定したいならこれも有効 */
+  max-width:700px;
+}
+
+#map img { width:100%; }
+
+.area {
+  position:absolute;
+  width:170px;
+  min-height:90px;
+  background:rgba(255,255,255,0.9);
+  border:1px solid #999;
+  padding:5px;
+  font-size:12px;
+}
+
+/* エリア番号 */
+.area::before {
+  content: attr(data-num);
+  font-weight:bold;
+  display:block;
+  text-align:left;
+}
+
+/* ラベル */
+.label {
+  font-size:11px;
+  margin-bottom:3px;
+}
+
+/* 名前 */
+.names {
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:3px;
+}
+
+/* 属性 */
+.fire {background:#ffb3b3;}
+.wind {background:#b3ffcc;}
+.earth {background:#ffe0b3;}
+
+/* 強調 */
+.highlight { border:3px solid red; animation:blink 1s infinite; }
+.prev { border:2px dashed #333; }
+
+@keyframes blink {50%{opacity:0.4;}}
+
+/* ===== ボタン ===== */
+.wave-buttons {
+  display:flex;
+  width:650px;
+  margin:auto;
+}
+
+.wave-buttons button {
+  flex:1;
+  margin:2px;
+}
+
+button {
+  padding:6px;
+  height:40px; /* ★これ追加（レイアウト安定） */
+  border:none;
+  border-radius:10px;
+  background:#ddd;
+  cursor:pointer;
+}
+
+button:hover {background:#ccc;}
+button.active {
+  background:#ff9933; /* 色変更OK */
+  color:white;
+}
+
+/* ✅ サイドを右に固定 */
+#side {
+  width:auto;       /* ←これに変更 */
+  max-width:400px;  /* ←上限（好みで調整） */
+
+  position:fixed;
+  right:0;
+  top:0;
+  padding:10px;
+
+  display:grid;
+
+  grid-template-columns:repeat(auto-fit, minmax(130px,1fr));
+  min-width:260px;
+
+  gap:5px;
+}
+
+/* 状態 */
+#status {
+  position:absolute;
+  top:10px;
+  left:10px;
+  background:white;
+  padding:6px 10px;
+  border-radius:10px;
+  border:1px solid #999;
+  font-weight:bold;
+}
+
+/* ★ここ追加 */
+#toggleBtn {
+  position:absolute;
+  top:50px;  /* ←位置調整できる */
+  left:10px;
+  z-index:10;
+}
+
+/* ===== スマホ対応 ===== */
+@media (max-width: 768px){
+
+  body {
+    display:block;
+  }
+
+  #main {
+    max-width:100%;
+  }
+
+  #side {
+    position:static;
+    width:100%;
+
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+    grid-auto-flow:row;
+  }
+
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="status">全体表示</div>
+
+<button onclick="toggleSide()" id="toggleBtn">
+  プレイヤー表示
+</button>
+
+<div id="main">
+
+<button onclick="resetView()" id="resetBtn">全体表示</button>
+
+<div class="wave-buttons">
+<button onclick="setWave(1)" id="w1">W1</button>
+<button onclick="setWave(2)" id="w2">W2</button>
+<button onclick="setWave(3)" id="w3">W3</button>
+<button onclick="setWave(4)" id="w4">W4</button>
+</div>
+
+<div id="map">
+<img src="https://i.imgur.com/S72tA7X.png">
+
+<!-- ★矢印レイヤー -->
+<svg id="arrowLayer"></svg>
+
+<div class="area a1" id="a1" data-num="①"></div>
+<div class="area a2" id="a2" data-num="②"></div>
+<div class="area a3" id="a3" data-num="③"></div>
+<div class="area a4" id="a4" data-num="④"></div>
+</div>
+
+</div>
+
+<div id="side"></div>
+
+<script>
+// ここは元のまま（省略なし）
+/* 属性 */
+const attr={
+"口裂けバニー":"fire","ラグナロク":"fire","波黒":"fire","九尾":"fire",
+"麒麟":"wind","扇毛":"wind","閻魔vo":"wind","獏":"wind",
+"白狼":"earth","サザエ":"earth","のっぺ":"earth"
+};
+
+/* ===== 行動 ===== */
+const actions = {
+"アセルス":[2,1,1,1],
+"はる":[2,1,1,1],
+"かぼちゃ":[2,1,1,1],
+"ChiTak":[3,3,4,1],
+"ハムたろう":[4,4,1,2],
+"ごみにゃん":[4,2,4,3],
+"てい":[4,2,4,4],
+"小林幸子":[3,2,2,3],
+"完熟トマト":[2,1,3,3],
+"ウキョ":[3,1,1,1],
+"スカイ":[2,2,4,3],
+"くろ":[3,4,3,2],
+"ルシウス":[3,1,1,1],
+"クリス":[2,1,1,1],
+"きゅか":[2,1,1,1],
+"あんかる":[4,1,1,1],
+"ふぁんた":[4,1,1,1],
+"mmmmmm":[3,1,1,1],
+"あか":[4,1,1,1],
+"あきのゆり":[4,1,1,1],
+"みったん":[2,3,2,2],
+"おねむ":[3,3,2,2],
+"ひなちゅ":[2,3,2,2],
+"ぎんろう":[4,4,3,4],
+"ルシ":[4,4,3,4],
+"くりちー":[3,4,3,4]
+};
+
+/* ========= キャラ ========= */
+const chars = {
+"アセルス":["口裂けバニー","口裂けバニー","麒麟","サザエ"],
+"はる":["口裂けバニー","口裂けバニー","麒麟","サザエ"],
+"かぼちゃ":["口裂けバニー","口裂けバニー","麒麟","サザエ"],
+"ChiTak":["白狼","白狼","白狼","サザエ"],
+"ハムたろう":["獏","獏","獏","獏"],
+"ごみにゃん":["扇毛","扇毛","白狼","口裂けバニー"],
+"てい":["扇毛","扇毛","白狼","麒麟"],
+"小林幸子":["扇毛","扇毛","口裂けバニー","口裂けバニー"],
+"完熟トマト":["口裂けバニー","口裂けバニー","口裂けバニー","口裂けバニー"],
+"ウキョ":["閻魔vo","閻魔vo","閻魔vo","閻魔vo"],
+"スカイ":["ラグナロク","ラグナロク","ラグナロク","ラグナロク"],
+"くろ":["白狼","白狼","白狼","白狼"],
+"ルシウス":["閻魔vo","閻魔vo","閻魔vo","閻魔vo"],
+"クリス":["扇毛","扇毛","扇毛","扇毛"],
+"きゅか":["扇毛","扇毛","扇毛","扇毛"],
+"あんかる":["ラグナロク","ラグナロク","ラグナロク","ラグナロク"],
+"ふぁんた":["ラグナロク","ラグナロク","ラグナロク","ラグナロク"],
+"mmmmmm":["波黒","波黒","波黒","波黒"],
+"あか":["波黒","波黒","波黒","波黒"],
+"あきのゆり":["波黒","波黒","波黒","波黒"],
+"みったん":["のっぺ","のっぺ","のっぺ","のっぺ"],
+"おねむ":["九尾","九尾","九尾","九尾"],
+"ひなちゅ":["のっぺ","のっぺ","のっぺ","のっぺ"],
+"ぎんろう":["のっぺ","のっぺ","のっぺ","のっぺ"],
+"ルシ":["のっぺ","のっぺ","のっぺ","のっぺ"],
+"くりちー":["九尾","九尾","九尾","九尾"]
+};
+
+let currentWave=1;
+let selected=null;
+
+/* ===== ラベル ===== */
+
+/* waveごとのラベル設定 */
+const waveLabels = {
+  1: {1:"", 2:"マルチ", 3:"マルチ", 4:"マルチ"},
+  2: {1:"レイド", 2:"ボス", 3:"マルチ", 4:"マルチ"},
+  3: {1:"レイド", 2:"マルチ", 3:"マルチ", 4:"ボス"},
+  4: {1:"レイド", 2:"マルチ", 3:"ボス", 4:"マルチ"}
+};
+
+/* ラベル取得 */
+function getLabel(pos){
+  return waveLabels[currentWave][pos] || "";
+}
+
+/* 描画 */
+function render(){
+
+  /* ★毎回矢印リセット */
+  document.getElementById("arrowLayer").innerHTML = "";
+
+  const map={1:[],2:[],3:[],4:[]};
+
+  Object.keys(actions).forEach(p=>{
+    const pos=actions[p][currentWave-1];
+    map[pos].push(p);
+  });
+
+  for(let i=1;i<=4;i++){
+    const el=document.getElementById("a"+i);
+    const list=map[i];
+
+    if(list.length===0){el.style.display="none";continue;}
+
+    el.style.display="block";
+    el.innerHTML=`
+      <div class="label">${getLabel(i)}</div>
+      <div class="names">
+      ${list.map(p=>{
+        const c=chars[p][currentWave-1];
+        return `<div class="${attr[c]}">${p}</div>`;
+      }).join("")}
+      </div>
+    `;
+
+    el.className="area a"+i;
+  }
+
+  drawPlayer();
+  updateStatus();
+  updateButtons(); /* ★これ追加 */
+}
+
+/* ★ボタンの色切り替え */
+function updateButtons(){
+  document.querySelectorAll("#side button").forEach(btn=>{
+    btn.classList.remove("active");
+
+    if(btn.dataset.name === selected){
+      btn.classList.add("active");
+    }
+  });
+}
+
+/* プレイヤー */
+function drawPlayer(){
+  document.querySelectorAll(".area").forEach(a=>{
+    a.classList.remove("highlight","prev");
+  });
+
+  if(!selected) return;
+
+  const now=actions[selected][currentWave-1];
+
+  if(currentWave===1){
+    document.getElementById("a"+now).classList.add("highlight");
+    return;
+  }
+
+  const prev=actions[selected][currentWave-2];
+
+  document.getElementById("a"+prev).classList.add("prev");
+  document.getElementById("a"+now).classList.add("highlight");
+
+/* ★矢印追加 */
+drawArrow(prev, now);
+
+}
+
+/* ★矢印描画 */
+function drawArrow(from, to){
+  const svg = document.getElementById("arrowLayer");
+  svg.innerHTML = "";
+
+  if(from === to) return;
+  if(currentWave === 1) return;
+
+  const center = {x:240, y:430};
+
+  const pos = {
+    1:{x:380,y:120},
+    2:{x:80,y:350},
+    3:{x:130,y:650},
+    4:{x:390,y:510}
+  };
+
+  const p1 = pos[from];
+  const p2 = pos[to];
+
+  /* ★余白（ここを調整） */
+  const offset = 10;  // ←40 → 20に縮小
+
+  /* ★矢じり分の補正 */
+  const arrowSize = 20;
+
+  function moveTowards(a,b,dist){
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    return {
+      x: a.x + dx/len * dist,
+      y: a.y + dy/len * dist
+    };
+  }
+
+  const dist1 = Math.hypot(center.x-p1.x, center.y-p1.y);
+  const dist2 = Math.hypot(center.x-p2.x, center.y-p2.y);
+
+  /* ★中央に余白＋矢じり分引く */
+  const mid1 = moveTowards(p1, center, dist1 - offset - arrowSize);
+  const mid2 = moveTowards(p2, center, dist2 - offset - arrowSize);
+
+  function line(x1,y1,x2,y2){
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"
+      stroke="green"
+      stroke-width="9"
+      stroke-dasharray="10 13"
+      stroke-dashoffset="5"
+      stroke-linecap="round"
+      class="flowLine"
+      marker-end="url(#arrowhead)" />`;
+  }
+
+  svg.innerHTML = `
+    <defs>
+      <!-- ★さらに小さい矢じり -->
+     <marker id="arrowhead"
+       markerWidth="4"
+       markerHeight="3"
+       refX="0"
+       refY="1"
+       orient="auto">
+
+       <polygon points="0 0, 3 1, 0 2" fill="green" />
+     </marker>
+
+    </defs>
+
+    ${line(p1.x,p1.y,mid1.x,mid1.y)}
+    ${line(mid2.x,mid2.y,p2.x,p2.y)}
+  `;
+}
+
+/* 状態 */
+function updateStatus(){
+  const el=document.getElementById("status");
+  el.innerText = selected ? `${selected} / wave${currentWave}` : `全体表示 / wave${currentWave}`;
+}
+
+/* 操作 */
+function setWave(w){
+  currentWave=w;
+
+  /* ★waveボタンの色更新 */
+  document.querySelectorAll(".wave-buttons button").forEach(b=>{
+    b.classList.remove("active");
+  });
+  document.getElementById("w"+w).classList.add("active");
+
+  render();
+}
+
+function selectPlayer(p){
+  selected=p;
+
+  /* ★全体表示ボタンOFF */
+  document.getElementById("resetBtn").classList.remove("active");
+
+  render();
+}
+
+function resetView(){
+  selected=null;
+
+  /* ★全体表示ボタンON */
+  document.getElementById("resetBtn").classList.add("active");
+
+  render();
+}
+
+/* UI */
+const side=document.getElementById("side");
+
+Object.keys(actions).forEach(p=>{
+  const btn=document.createElement("button");
+  btn.innerText=p;
+
+  btn.dataset.name = p; /* ★これ追加 */
+
+  btn.onclick=()=>selectPlayer(p);
+  side.appendChild(btn);
+});
+
+/* ★ここ追加：表示ON/OFF */
+let sideVisible = false;
+
+function toggleSide(){
+  const side = document.getElementById("side");
+  const btn = document.getElementById("toggleBtn");
+
+  sideVisible = !sideVisible;
+
+  if(sideVisible){
+    side.style.display = "grid";
+    btn.innerText = "プレイヤー非表示";
+  }else{
+    side.style.display = "none";
+    btn.innerText = "プレイヤー表示";
+  }
+}
+
+render();
+
+/* ★初期ボタン状態を反映 */
+document.getElementById("w1").classList.add("active");
+document.getElementById("resetBtn").classList.add("active");
+
+/* ★最初から非表示にする */
+document.getElementById("side").style.display = "none";
+
+</script>
+
+</body>
+</html>
