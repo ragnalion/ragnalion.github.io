@@ -15,6 +15,8 @@ body {
   /* ✅ 画面中央寄せ（縦横） */
   display:flex;
   justify-content:center; /* 横中央 */
+
+  align-items:flex-start;  /* ★これ追加（最重要） */
 }
 
 /* ===== MAPサイズ（ここ調整） ===== */
@@ -94,6 +96,12 @@ body {
   gap:3px;
 }
 
+.names.ptMode {
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:6px;
+}
+
 /* 属性 */
 .fire {background:#ffb3b3;}
 .wind {background:#b3ffcc;}
@@ -121,17 +129,46 @@ body {
 
 button {
   padding:6px;
-  height:40px; /* ★これ追加（レイアウト安定） */
+  height:40px;
   border:none;
   border-radius:10px;
-  background:#ddd;
   cursor:pointer;
+
+  color:#222;
+  font-weight:bold;
+
+  /* ★光沢（ここがポイント） */
+  background: linear-gradient(
+    to bottom,
+    #ffffff 0%,     /* ハイライト */
+    #f5f5f5 35%,    /* 光の境目 */
+    #e0e0e0 60%,    /* 中間 */
+    #d0d0d0 100%    /* 影 */
+  );
+
+  box-shadow: 0 4px 0 #aaa;
+  transition: all 0.1s ease;
 }
 
-button:hover {background:#ccc;}
+button:active {
+  transform: translateY(4px);
+
+  background: linear-gradient(to bottom, #dddddd, #bbbbbb);
+
+  box-shadow: 0 0 0 #aaa;
+}
+
+button:hover {
+  background: linear-gradient(to bottom, #ffffff, #e6e6e6);
+}
+
 button.active {
-  background:#ff9933; /* 色変更OK */
+  background: linear-gradient(to bottom, #ffb366, #ff9933);
   color:white;
+
+  box-shadow: 0 4px 0 #cc7a00;
+
+  text-shadow: 0 -1px 0 rgba(0,0,0,0.3);
 }
 
 /* ✅ サイドを右に固定 */
@@ -154,20 +191,23 @@ button.active {
 
 /* 状態 */
 #status {
-  position:absolute;
-  top:10px;
-  left:10px;
+  position:static;
+  margin-top:10px;
+  text-align:center;
+
   background:white;
   padding:6px 10px;
   border-radius:10px;
   border:1px solid #999;
   font-weight:bold;
+
+  display:inline-block;   /* ★これ追加 */
 }
 
 /* ★ここ追加 */
 #toggleBtn {
   position:absolute;
-  top:50px;  /* ←位置調整できる */
+  top:60px;  /* ←位置調整できる */
   left:10px;
   z-index:10;
 }
@@ -192,6 +232,54 @@ button.active {
     grid-auto-flow:row;
   }
 
+}
+
+/* ←この下に貼る */
+.pt {
+  border:2px solid #666;
+  border-radius:6px;
+  padding:4px;
+
+  display:flex;
+  flex-wrap:wrap;
+  gap:4px;
+}
+
+.pt:has(div:only-child) {
+  justify-content:center;
+  background:#fff;  /* ★白に変更 */
+}
+
+.pt.solo {
+  grid-column:span 1;
+}
+
+/* ★これ追加 */
+.pt:has(div:only-child) {
+  grid-template-columns:1fr;
+}
+
+.pt1 { background:rgba(227,242,253,0.4); }
+.pt2 { background:rgba(252,228,236,0.4); }
+.pt3 { background:rgba(232,245,233,0.4); }
+.pt4 { background:rgba(255,243,224,0.4); }
+
+#note {
+  width:100%;
+  max-width:500px;
+  margin:10px auto;
+  text-align:center;
+
+  font-size:18px;
+  font-weight:bold;
+}
+
+.grid2 {
+  display:grid !important;
+  grid-template-columns:repeat(2,1fr);
+
+  grid-column:span 2;
+  background:#fff !important;
 }
 
 </style>
@@ -228,6 +316,8 @@ button.active {
 <div class="area a4" id="a4" data-num="④"></div>
 </div>
 
+<div id="note"></div>  <!-- ←これ追加 -->
+
 </div>
 
 <div id="side"></div>
@@ -241,43 +331,43 @@ const attr={
 "乙姫":"earth","のっぺ":"earth","九尾":"fire"
 };
 
-/* 行動 */
+/* ===== 行動 ===== */
 const actions = {
 "アセルス":[4,1,1,1],
-"はる":[2,1,2,3],
+"はる":[3,1,1,1],
 "かぼちゃ":[2,1,1,1],
 "ChiTak":[3,1,1,1],
+"Alucu":[2,1,2,3],
 "ハムたろう":[4,2,1,4],
 "ごみにゃん":[3,3,4,1],
 "てい":[4,2,3,4],
 "小林幸子":[3,4,4,2],
 "完熟トマト":[2,1,3,3],
-"ウキョ":[4,3,2,2],
+"ウキョ":[4,3,1,2],
 "スカイ":[4,2,1,2],
 "くろ":[2,1,2,3],
-"ルシウス":[3,1,1,2],
-"クリス":[3,3,4,1],
-"きゅか":[2,1,1,1],
-"あんかる":[2,2,4,3],
-"ふぁんた":[4,1,2,1],
-"mmmmmm":[2,1,3,4],
-"あか":[4,1,1,1],
-"あきのゆり":[4,1,3,1],
-"みったん":[2,3,2,2],
-"おねむ":[3,3,2,1],
-"田楽マン":[3,1,1,2],
-"みかさ":[2,4,1,4],
-"ぎんろう":[4,4,1,4],
-"ルシ":[4,4,3,4],
+"ルシウス":[2,1,3,4],
+"クリス":[2,2,4,3],
+"きゅか":[2,1,2,1],
+"ふぁんた":[3,4,1,4],
+"あか":[4,1,2,1],
+"あきのゆり":[4,1,1,1],
+"みったん":[2,3,3,2],
+"おねむ":[3,3,1,1],
+"田楽マン":[3,1,1,1],
+"みかさ":[2,3,1,2],
+"ぎんろう":[4,4,4,1],
+"ルシ":[4,4,3,2],
 "くりちー":[3,4,3,1]
 };
 
-/* キャラ */
+/* ========= キャラ ========= */
 const chars = {
 "アセルス":["扇毛","扇毛","扇毛","扇毛"],
-"はる":["口裂けバニー","口裂けバニー","口裂けバニー","口裂けバニー"],
+"はる":["乙姫","乙姫","乙姫","乙姫"],
 "かぼちゃ":["扇毛","扇毛","扇毛","扇毛"],
 "ChiTak":["乙姫","乙姫","乙姫","乙姫"],
+"Alucu":["口裂けバニー","口裂けバニー","口裂けバニー","口裂けバニー"],
 "ハムたろう":["扇毛","扇毛","扇毛","扇毛"],
 "ごみにゃん":["乙姫","乙姫","乙姫","乙姫"],
 "てい":["扇毛","扇毛","扇毛","扇毛"],
@@ -286,19 +376,17 @@ const chars = {
 "ウキョ":["扇毛","扇毛","扇毛","扇毛"],
 "スカイ":["扇毛","扇毛","扇毛","扇毛"],
 "くろ":["口裂けバニー","口裂けバニー","口裂けバニー","口裂けバニー"],
-"ルシウス":["扇毛","扇毛","扇毛","扇毛"],
+"ルシウス":["口裂けバニー","口裂けバニー","口裂けバニー","口裂けバニー"],
 "クリス":["乙姫","乙姫","乙姫","乙姫"],
 "きゅか":["ラグナロク","ラグナロク","ラグナロク","ラグナロク"],
-"あんかる":["乙姫","乙姫","乙姫","乙姫"],
-"ふぁんた":["波黒","波黒","波黒","波黒"],
-"mmmmmm":["口裂けバニー","口裂けバニー","口裂けバニー","口裂けバニー"],
-"あか":["乙姫","乙姫","乙姫","乙姫"],
+"ふぁんた":["扇毛","扇毛","扇毛","扇毛"],
+"あか":["ラグナロク","ラグナロク","ラグナロク","ラグナロク"],
 "あきのゆり":["波黒","波黒","波黒","波黒"],
 "みったん":["のっぺ","のっぺ","のっぺ","のっぺ"],
 "おねむ":["九尾","九尾","九尾","九尾"],
 "田楽マン":["波黒","波黒","波黒","波黒"],
 "みかさ":["のっぺ","のっぺ","のっぺ","のっぺ"],
-"ぎんろう":["のっぺ","のっぺ","のっぺ","のっぺ"],
+"ぎんろう":["乙姫","乙姫","乙姫","乙姫"],
 "ルシ":["のっぺ","のっぺ","のっぺ","のっぺ"],
 "くりちー":["九尾","九尾","九尾","九尾"]
 };
@@ -324,7 +412,6 @@ function getLabel(pos){
 /* 描画 */
 function render(){
 
-  /* ★毎回矢印リセット */
   document.getElementById("arrowLayer").innerHTML = "";
 
   const map={1:[],2:[],3:[],4:[]};
@@ -336,22 +423,98 @@ function render(){
 
   for(let i=1;i<=4;i++){
     const el=document.getElementById("a"+i);
+    el.classList.remove("ptMode");
     const list=map[i];
 
     if(list.length===0){el.style.display="none";continue;}
-
     el.style.display="block";
-    el.innerHTML=`
-      <div class="label">${getLabel(i)}</div>
-      <div class="names">
-      ${list.map(p=>{
+
+    let content="";
+
+    // ===== wave3 =====
+    if(currentWave===3 && i===2){
+      el.classList.add("ptMode");
+      let idx=1;
+      content = list.map(p=>{
+        const c=chars[p][2];
+        return `<div class="pt pt${idx++}"><div class="${attr[c]}">${p}</div></div>`;
+      }).join("");
+    }
+
+    else if(currentWave===3 && i===3){
+      el.classList.add("ptMode");
+      let html="";
+      let idx=1;
+
+      // 単独
+      ["完熟トマト","ルシウス"].forEach(p=>{
+        if(list.includes(p)){
+          const c=chars[p][2];
+          html += `<div class="pt pt${idx++}"><div class="${attr[c]}">${p}</div></div>`;
+        }
+      });
+
+      // グループ
+      const party = ["てい","みったん","ルシ","くりちー"].filter(p=>list.includes(p));
+      if(party.length){
+         html += `<div class="pt pt${idx} grid2">` +
+            party.map(p=>{
+            const c=chars[p][2];
+            return `<div class="${attr[c]}">${p}</div>`;
+          }).join("") +
+        `</div>`;
+      }
+
+      content = html;
+    }
+
+    // ===== wave4 =====
+    else if(currentWave===4 && i===2){
+     el.classList.add("ptMode");
+      let html="";
+      let idx=1;
+
+      ["ウキョ","スカイ"].forEach(p=>{
+        if(list.includes(p)){
+          const c=chars[p][3];
+          html += `<div class="pt pt${idx++}"><div class="${attr[c]}">${p}</div></div>`;
+        }
+      });
+
+      const party = ["小林幸子","みかさ","みったん","ルシ"].filter(p=>list.includes(p));
+      if(party.length){
+        html += `<div class="pt pt${idx} grid2">` +
+         party.map(p=>{
+            const c=chars[p][3];
+            return `<div class="${attr[c]}">${p}</div>`;
+          }).join("") +
+        `</div>`;
+      }
+
+      content = html;
+    }
+
+    else if(currentWave===4 && i===4){
+     el.classList.add("ptMode");
+      let idx=1;
+      content = list.map(p=>{
+        const c=chars[p][3];
+        return `<div class="pt pt${idx++}"><div class="${attr[c]}">${p}</div></div>`;
+      }).join("");
+    }
+
+    // ===== 通常 =====
+    else{
+      content = list.map(p=>{
         const c=chars[p][currentWave-1];
         return `<div class="${attr[c]}">${p}</div>`;
-      }).join("")}
-      </div>
-    `;
+      }).join("");
+    }
 
-    el.className="area a"+i;
+    el.innerHTML=`
+      <div class="label">${getLabel(i)}</div>
+      <div class="names">${content}</div>
+    `;
   }
 
   drawPlayer();
@@ -361,6 +524,8 @@ function render(){
 
 /* ★ボタンの色切り替え */
 function updateButtons(){
+
+  // プレイヤーボタン
   document.querySelectorAll("#side button").forEach(btn=>{
     btn.classList.remove("active");
 
@@ -368,6 +533,15 @@ function updateButtons(){
       btn.classList.add("active");
     }
   });
+
+  // ★全体表示ボタン制御（追加）
+  const resetBtn = document.getElementById("resetBtn");
+
+  if(selected === null){
+    resetBtn.classList.add("active");
+  }else{
+    resetBtn.classList.remove("active");
+  }
 }
 
 /* プレイヤー */
@@ -471,8 +645,62 @@ function drawArrow(from, to){
 
 /* 状態 */
 function updateStatus(){
-  const el=document.getElementById("status");
-  el.innerText = selected ? `${selected} / wave${currentWave}` : `全体表示 / wave${currentWave}`;
+  const el = document.getElementById("status");
+  const noteEl = document.getElementById("note");
+
+  if(!selected){
+    el.innerText = `全体表示 / wave${currentWave}`;
+    noteEl.innerText = "";
+    return;
+  }
+
+  let note = "";
+
+// wave3
+if(currentWave===3){
+
+  // ②は全員ソロ
+  if(actions[selected][2] === 2){
+    note = "※マルチはソロで討伐";
+  }
+
+  // ③のグループ
+  const group = ["てい","みったん","ルシ","くりちー"];
+
+  if(actions[selected][2] === 3){
+    if(group.includes(selected)){
+      const party = group.filter(p=>p!==selected);
+      note = `※マルチは「${party.join("・")}」と同PT`;
+    }else{
+      note = "※マルチはソロで討伐";
+    }
+  }
+}
+
+// wave4
+if(currentWave===4){
+
+  // ④は全員ソロ
+  if(actions[selected][3] === 4){
+    note = "※マルチはソロで討伐";
+  }
+
+  // ②のグループ
+  const group = ["小林幸子","みかさ","みったん","ルシ"];
+
+  if(actions[selected][3] === 2){
+    if(group.includes(selected)){
+      const party = group.filter(p=>p!==selected);
+      note = `※マルチは「${party.join("・")}」と同PT`;
+    }else{
+      note = "※マルチはソロで討伐";
+    }
+  }
+}
+
+  // 表示
+  el.innerText = `${selected} / wave${currentWave}`;
+  noteEl.innerText = note;
 }
 
 /* 操作 */
@@ -499,9 +727,6 @@ function selectPlayer(p){
 
 function resetView(){
   selected=null;
-
-  /* ★全体表示ボタンON */
-  document.getElementById("resetBtn").classList.add("active");
 
   render();
 }
